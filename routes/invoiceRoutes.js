@@ -26,4 +26,6 @@ router.post('/:id/pay', invoiceController.payInvoice);
 // Delete an invoice by ID
 router.delete('/:id', invoiceController.deleteInvoice);
 
+router.get('/:id/pdf', invoiceController.downloadInvoicePDF);
+
 module.exports = router;

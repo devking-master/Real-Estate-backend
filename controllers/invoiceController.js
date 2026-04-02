@@ -229,12 +229,12 @@ exports.downloadInvoicePDF = async (req, res) => {
 
     if (!invoice) return res.status(404).send('Invoice not found');
 
-    const doc = new PDFDocument({ margin: 0 });
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${invoice.invoiceNumber}.pdf`);
     doc.pipe(res);
 
-    // Header
+    // Header Background
     doc.rect(0, 0, 612, 120).fill('#1e293b'); 
     doc.fillColor('#ffffff').fontSize(25).font('Helvetica-Bold').text('INVOICE', 40, 45);
     doc.fontSize(10).font('Helvetica').text(`NO: ${invoice.invoiceNumber}`, 40, 75);
@@ -242,49 +242,59 @@ exports.downloadInvoicePDF = async (req, res) => {
     // Status Badge
     const statusColor = invoice.status === 'paid' ? '#10b981' : '#f59e0b';
     doc.rect(450, 40, 100, 30).fill(statusColor);
-    doc.fillColor('#ffffff').fontSize(12).text(invoice.status.toUpperCase(), 450, 50, { width: 100, align: 'center' });
+    doc.fillColor('#ffffff').fontSize(12).text(invoice.status?.toUpperCase() || 'PENDING', 450, 50, { width: 100, align: 'center' });
 
     doc.fillColor('#000000').fontSize(10);
     const bodyStart = 150;
 
+    // From Section
     doc.font('Helvetica-Bold').text('FROM:', 40, bodyStart);
     doc.font('Helvetica').text('SurePay Real Estate', 40, bodyStart + 15);
     doc.text('Ibadan, Oyo State, Nigeria', 40, bodyStart + 30);
 
+    // Bill To Section
     doc.font('Helvetica-Bold').text('BILL TO:', 300, bodyStart);
-    doc.font('Helvetica').text(invoice.clientName || invoice.clientId?.name || 'Valued Client', 300, bodyStart + 15);
+    doc.font('Helvetica').text(invoice.clientId?.name || invoice.clientName || 'Valued Client', 300, bodyStart + 15);
 
-    doc.rect(40, 220, 532, 60).fill('#f8fafc');
+    // Property Box
+    doc.rect(40, 220, 512, 60).fill('#f8fafc');
     doc.fillColor('#475569').font('Helvetica-Bold').text('PROPERTY DETAILS', 55, 230);
-    doc.fillColor('#1e293b').font('Helvetica').text(invoice.propertyId?.title || invoice.propertyId?.name || 'Service', 55, 250);
+    doc.fillColor('#1e293b').font('Helvetica').text(invoice.propertyId?.title || invoice.propertyId?.name || 'Real Estate Asset', 55, 250);
 
+    // Table Header
     const tableTop = 320;
-    doc.fillColor('#1e293b').rect(40, tableTop, 532, 25).fill();
+    doc.fillColor('#1e293b').rect(40, tableTop, 512, 25).fill();
     doc.fillColor('#ffffff').font('Helvetica-Bold');
     doc.text('Description', 60, tableTop + 7);
-    doc.text('Total', 350, tableTop + 7);
-    doc.text('Paid', 430, tableTop + 7);
-    doc.text('Balance', 510, tableTop + 7);
+    doc.text('Total', 320, tableTop + 7);
+    doc.text('Paid', 400, tableTop + 7);
+    doc.text('Balance', 480, tableTop + 7);
 
+    // Table Row
     const rowY = tableTop + 40;
     const currentPaid = Number(invoice.amountPaid || 0);
     const currentTotal = Number(invoice.totalAmount || 0);
+    const balance = currentTotal - currentPaid;
 
     doc.fillColor('#000000').font('Helvetica');
     doc.text('Property Transaction Fee', 60, rowY);
-    doc.text(`N${currentTotal.toLocaleString()}`, 350, rowY);
-    doc.text(`N${currentPaid.toLocaleString()}`, 430, rowY);
-    doc.text(`N${(currentTotal - currentPaid).toLocaleString()}`, 510, rowY);
+    doc.text(`N${currentTotal.toLocaleString()}`, 320, rowY);
+    doc.text(`N${currentPaid.toLocaleString()}`, 400, rowY);
+    doc.text(`N${balance.toLocaleString()}`, 480, rowY);
 
-    doc.rect(350, 450, 222, 100).fill('#f1f5f9');
-    doc.fillColor('#475569').fontSize(12).text('TOTAL DUE', 370, 470);
-    doc.fillColor('#1e293b').fontSize(22).font('Helvetica-Bold').text(`N${(currentTotal - currentPaid).toLocaleString()}`, 370, 490);
+    // Total Due Box
+    doc.rect(330, 450, 222, 100).fill('#f1f5f9');
+    doc.fillColor('#475569').fontSize(12).text('TOTAL BALANCE', 350, 470);
+    doc.fillColor('#1e293b').fontSize(22).font('Helvetica-Bold').text(`N${balance.toLocaleString()}`, 350, 490);
 
-    doc.fontSize(10).fillColor('#94a3b8').text('Computer-generated document.', 0, 750, { align: 'center', width: 612 });
+    // Footer
+    doc.fontSize(10).fillColor('#94a3b8').text('This is a computer-generated document.', 0, 780, { align: 'center', width: 595 });
 
     doc.end();
   } catch (error) {
-    console.error("PDF Error:", error);
-    res.status(500).send('Error generating PDF');
+    console.error("PDF Generation Error:", error);
+    if (!res.headersSent) {
+      res.status(500).send('Error generating PDF');
+    }
   }
 };
