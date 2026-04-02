@@ -178,15 +178,22 @@ exports.payInvoice = async (req, res) => {
     await transaction.save();
     await invoice.save();
 
-    // 4. Clean up Payment Method
-    let formattedMethod = 'bank_transfer'; 
-    const methodInput = (paymentMethod || '').toLowerCase();
-    if (methodInput.includes('transfer')) formattedMethod = 'bank_transfer';
-    else if (methodInput.includes('cash')) formattedMethod = 'cash';
-    else if (methodInput.includes('card')) formattedMethod = 'credit_card';
-    else if (methodInput.includes('check')) formattedMethod = 'check';
+    // 4. Improved Payment Method handling
+let formattedMethod = paymentMethod || 'bank_transfer'; 
 
-    // 5. Create Receipt (Added unique random suffix to ensure creation on every payment)
+if (paymentMethod) {
+    const methodInput = paymentMethod.toLowerCase();
+    // This ensures if you send "Cash", "CASH", or "cash" it maps correctly
+    if (methodInput.includes('cash')) formattedMethod = 'cash';
+    else if (methodInput.includes('card')) formattedMethod = 'credit_card';
+    else if (methodInput.includes('check') || methodInput.includes('cheque')) formattedMethod = 'check';
+    else if (methodInput.includes('transfer')) formattedMethod = 'bank_transfer';
+    else formattedMethod = paymentMethod; // fallback to exactly what was sent
+}
+
+    // --- UPDATE THIS SECTION IN invoiceController.js (Inside payInvoice) ---
+
+    // 5. Create Receipt
     let receipt = null;
     try {
         const uniqueSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -194,18 +201,25 @@ exports.payInvoice = async (req, res) => {
             receiptNumber: `REC-${Date.now()}-${uniqueSuffix}`,
             invoiceId: invoice._id,
             transactionId: transaction._id,
-            clientId: invoice.clientId,    
-            propertyId: invoice.propertyId, 
-            amountPaid: paymentAmount, 
+            clientId: invoice.clientId,
+            propertyId: invoice.propertyId, // Ensure this is correctly linked
+            amountPaid: paymentAmount,
             balanceRemaining: Math.max(0, remaining),
             paymentMethod: formattedMethod,
             date: date || new Date()
         });
         await receipt.save();
+
+        // FINAL FIX: Manually populate so the Frontend sees the name immediately
+        receipt = await Receipt.findById(receipt._id)
+            .populate('clientId', 'name')
+            .populate('propertyId', 'title name'); // Checks both fields
+
     } catch (receiptError) {
         console.error("Receipt Save Error:", receiptError.message);
     }
 
+    
     const populatedInvoice = await Invoice.findById(invoice._id)
       .populate('clientId', 'name')
       .populate('propertyId', 'title name');

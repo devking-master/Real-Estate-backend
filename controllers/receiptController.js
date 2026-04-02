@@ -117,11 +117,12 @@ exports.deleteReceipt = async (req, res) => {
 // Add this to receiptController.js
 exports.generateFromPayment = async (req, res) => {
   try {
-    const { paymentId, invoiceId, clientId, propertyId, amountPaid, paymentMethod, balanceRemaining } = req.body;
+    const { invoiceId, clientId, propertyId, amountPaid, paymentMethod, balanceRemaining, transactionId } = req.body;
 
     const receipt = new Receipt({
       receiptNumber: `REC-${Date.now()}`,
       invoiceId,
+      transactionId,
       clientId,
       propertyId,
       amountPaid,
@@ -132,12 +133,15 @@ exports.generateFromPayment = async (req, res) => {
 
     await receipt.save();
     
-    // Return the full object so the UI updates immediately
+    // FINAL FIX: Populate before sending back to Frontend
     const populatedReceipt = await Receipt.findById(receipt._id)
       .populate('clientId', 'name')
-      .populate('propertyId', 'title');
+      .populate('propertyId', 'title name');
 
-    res.status(201).json({ success: true, data: populatedReceipt });
+    res.status(201).json({ 
+        success: true, 
+        data: populatedReceipt 
+    });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }

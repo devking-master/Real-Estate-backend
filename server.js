@@ -5,8 +5,21 @@ const cors = require('cors');
 const morgan = require('morgan');
 const multer = require('multer');
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// 1. First, tell Multer HOW and WHERE to save files
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Save in the uploads folder
+  },
+  filename: (req, file, cb) => {
+    // This keeps the original file extension (like .jpg) so the browser can read it
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = require('path').extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+// 2. Now use that storage config
+const upload = multer({ storage: storage });
 
 // Import route modules
 const transactionRoutes = require('./routes/transactionRoutes');
