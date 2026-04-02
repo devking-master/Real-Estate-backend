@@ -43,7 +43,7 @@ exports.createTransaction = async (req, res) => {
           propertyId: transaction.property,
           amountPaid: transaction.paidAmount,
           balanceRemaining: Math.max(0, transaction.totalAmount - transaction.paidAmount),
-          paymentMethod: 'bank_transfer',
+          paymentMethod: req.body.paymentMethod || 'bank_transfer',
           date: new Date()
         });
         
@@ -136,10 +136,10 @@ exports.updateTransaction = async (req, res) => {
         transactionId: transaction._id,
         invoiceId: linkedInvoice ? linkedInvoice._id : undefined,
         clientId: transaction.client._id || transaction.client,
-        propertyId: transaction.property._id || transaction.property,
+        propertyId: transaction.property._id || transaction.property, // Ensures ID is passed
         amountPaid: newPaymentMade,
         balanceRemaining: Math.max(0, transaction.totalAmount - transaction.paidAmount),
-        paymentMethod: 'bank_transfer',
+        paymentMethod: req.body.paymentMethod || 'bank_transfer', // Uses selected method
         date: new Date()
       });
       await receipt.save();
