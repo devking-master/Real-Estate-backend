@@ -55,7 +55,7 @@ const authRoutes = require('./routes/authRoutes');
 // Upload route
 app.post('/api/upload', upload.single('document'), (req, res) => {
   try {
-    res.json({ data: { fileUrl: req.file.path } });
+    res.json({ data: { fileUrl: req.file.path.replace(/\\/g, '/') } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
