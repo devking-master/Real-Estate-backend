@@ -1,27 +1,46 @@
-require('dotenv').config(); // Load environment variables from .env file
+require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
 const multer = require('multer');
+const path = require('path');
 
-// 1. First, tell Multer HOW and WHERE to save files
+const app = express();
+
+// --- 1. MIDDLEWARE (Order is Critical) ---
+
+// Configure CORS to allow your frontend and handle preflight (OPTIONS) requests
+app.use(cors({
+  origin: '*', // Allows access from any origin (useful for testing)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+app.use(express.json()); // Parse JSON bodies
+app.use(morgan('dev')); // Log HTTP requests
+
+// --- 2. FILE STORAGE (Multer) ---
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Save in the uploads folder
+    cb(null, 'uploads/'); 
   },
   filename: (req, file, cb) => {
-    // This keeps the original file extension (like .jpg) so the browser can read it
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = require('path').extname(file.originalname);
+    const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
 
-// 2. Now use that storage config
 const upload = multer({ storage: storage });
 
-// Import route modules
+// Serve static files
+app.use('/uploads', express.static('uploads'));
+
+// --- 3. ROUTES ---
+
 const transactionRoutes = require('./routes/transactionRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const receiptRoutes = require('./routes/receiptRoutes');
@@ -32,18 +51,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
 
-const app = express();
-const PORT = process.env.PORT || 5000; // Default port 5000 if not set in .env
-
-// Middleware
-app.use(express.json()); // Parse JSON bodies
-app.use(cors()); // Enable CORS for all routes
-app.use(morgan('dev')); // Log HTTP requests
-
-// Serve static files from uploads directory
-app.use('/uploads', express.static('uploads'));
-
-// Upload route for documents
+// Upload route
 app.post('/api/upload', upload.single('document'), (req, res) => {
   try {
     res.json({ data: { fileUrl: req.file.path } });
@@ -52,7 +60,7 @@ app.post('/api/upload', upload.single('document'), (req, res) => {
   }
 });
 
-// Routes
+// API Routes
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/receipts', receiptRoutes);
@@ -63,25 +71,30 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reports', reportsRoutes);
 
-// Error handling middleware
+// Root route for health check
+app.get('/', (req, res) => {
+  res.send('Real Estate API is running...');
+});
+
+// --- 4. ERROR HANDLING ---
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('Connected to MongoDB successfully');
-})
-.catch((error) => {
-  console.error('MongoDB connection error:', error);
-});
+// --- 5. DATABASE & SERVER START ---
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
+
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('✅ Connected to MongoDB successfully');
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error);
+  });
