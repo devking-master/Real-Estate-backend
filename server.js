@@ -12,7 +12,7 @@ const app = express();
 
 // Configure CORS to allow your frontend and handle preflight (OPTIONS) requests
 app.use(cors({
-  origin: '*', // Allows access from any origin (useful for testing)
+  origin: 'http://localhost:5173', // Allows access from any origin (useful for testing)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
