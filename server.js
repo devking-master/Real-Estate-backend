@@ -10,9 +10,9 @@ const app = express();
 
 // --- 1. MIDDLEWARE (Order is Critical) ---
 
-// Configure CORS to allow your frontend and handle preflight (OPTIONS) requests
+// Configure CORS to allow all origins
 app.use(cors({
-  origin: 'http://localhost:5173', // Allows access from any origin (useful for testing)
+  origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -50,6 +50,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 // Upload route
 app.post('/api/upload', upload.single('document'), (req, res) => {
@@ -70,6 +71,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/auth', authRoutes);
 
 // Root route for health check
 app.get('/', (req, res) => {
