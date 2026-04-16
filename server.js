@@ -5,6 +5,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
@@ -18,8 +19,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json()); // Parse JSON bodies
-app.use(morgan('dev')); // Log HTTP requests
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(morgan('dev')); 
 
 // --- 2. FILE STORAGE (Multer) ---
 
@@ -52,10 +54,29 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
 const authRoutes = require('./routes/authRoutes');
 
-// Upload route
+// Upload route - Converts image to Base64
 app.post('/api/upload', upload.single('document'), (req, res) => {
+  console.log('--- Upload Request Received ---');
   try {
-    res.json({ data: { fileUrl: req.file.path.replace(/\\/g, '/') } });
+    if (!req.file) {
+      console.log('No file in request');
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log('File received:', req.file.originalname, 'Size:', req.file.size);
+
+    // Read the file and convert to Base64
+    const fileData = fs.readFileSync(req.file.path);
+    const base64Data = fileData.toString('base64');
+    const mimeType = req.file.mimetype;
+    const fileUrl = `data:${mimeType};base64,${base64Data}`;
+
+    // Clean up: delete the temporary file from uploads folder
+    fs.unlink(req.file.path, (err) => {
+      if (err) console.error('Error deleting temp file:', err);
+    });
+
+    res.json({ data: { fileUrl } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

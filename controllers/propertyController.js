@@ -1,5 +1,6 @@
 const Property = require('../models/Property');
 const multer = require('multer');
+const fs = require('fs');
 
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' }); // Files will be stored in 'uploads' directory
@@ -78,12 +79,31 @@ exports.uploadImage = [
   upload.single('image'), // Middleware to handle single file upload with field name 'image'
   async (req, res) => {
     try {
-      const property = await Property.findById(req.params.id);
-      if (!property) return res.status(404).json({ error: 'Property not found' });
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image uploaded' });
+      }
 
-      // Update the property's image URL with the uploaded file path
-      property.imageUrl = req.file.path; // Or use req.file.filename if needed
+      const property = await Property.findById(req.params.id);
+      if (!property) {
+        // Cleanup file if property not found
+        fs.unlink(req.file.path, () => {});
+        return res.status(404).json({ error: 'Property not found' });
+      }
+
+      // Convert to Base64
+      const fileData = fs.readFileSync(req.file.path);
+      const base64Data = fileData.toString('base64');
+      const mimeType = req.file.mimetype;
+      const base64Url = `data:${mimeType};base64,${base64Data}`;
+
+      // Update the property's image URL with the Base64 data
+      property.imageUrl = base64Url;
       await property.save();
+
+      // Cleanup: delete the temporary file
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting temp file:', err);
+      });
 
       res.json({ data: property });
     } catch (error) {
