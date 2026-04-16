@@ -13,10 +13,15 @@ const app = express();
 
 // Configure CORS to allow local and production origins
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://real-estate-backend-oa4v.onrender.com'], 
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:3000', 
+    'https://real-estate-frontend-three-kappa.vercel.app' // ADD THIS
+  ], 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
 
 app.use(express.json({ limit: '50mb' })); 
