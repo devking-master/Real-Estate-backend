@@ -1,9 +1,9 @@
 const Property = require('../models/Property');
 const multer = require('multer');
-const fs = require('fs');
+const { storage } = require('../config/cloudinary');
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' }); // Files will be stored in 'uploads' directory
+// Configure multer for file uploads using Cloudinary storage
+const upload = multer({ storage: storage }); 
 
 // Controller for handling property-related operations
 // Includes CRUD operations and image upload for properties
@@ -85,25 +85,15 @@ exports.uploadImage = [
 
       const property = await Property.findById(req.params.id);
       if (!property) {
-        // Cleanup file if property not found
-        fs.unlink(req.file.path, () => {});
         return res.status(404).json({ error: 'Property not found' });
       }
 
-      // Convert to Base64
-      const fileData = fs.readFileSync(req.file.path);
-      const base64Data = fileData.toString('base64');
-      const mimeType = req.file.mimetype;
-      const base64Url = `data:${mimeType};base64,${base64Data}`;
+      // The secure URL is provided by multer-storage-cloudinary in req.file.path
+      const cloudinaryUrl = req.file.path;
 
-      // Update the property's image URL with the Base64 data
-      property.imageUrl = base64Url;
+      // Update the property's image URL with the Cloudinary URL
+      property.imageUrl = cloudinaryUrl;
       await property.save();
-
-      // Cleanup: delete the temporary file
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Error deleting temp file:', err);
-      });
 
       res.json({ data: property });
     } catch (error) {

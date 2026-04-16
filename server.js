@@ -30,17 +30,7 @@ app.use(morgan('dev'));
 
 // --- 2. FILE STORAGE (Multer) ---
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); 
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
-
+const { storage } = require('./config/cloudinary');
 const upload = multer({ storage: storage });
 
 // Serve static files
@@ -59,7 +49,7 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
 const authRoutes = require('./routes/authRoutes');
 
-// Upload route - Converts image to Base64
+// Upload route - Uploads file to Cloudinary and returns the secure URL
 app.post('/api/upload', upload.single('document'), (req, res) => {
   console.log('--- Upload Request Received ---');
   try {
@@ -68,20 +58,9 @@ app.post('/api/upload', upload.single('document'), (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('File received:', req.file.originalname, 'Size:', req.file.size);
+    console.log('File received and uploaded to Cloudinary:', req.file.path);
 
-    // Read the file and convert to Base64
-    const fileData = fs.readFileSync(req.file.path);
-    const base64Data = fileData.toString('base64');
-    const mimeType = req.file.mimetype;
-    const fileUrl = `data:${mimeType};base64,${base64Data}`;
-
-    // Clean up: delete the temporary file from uploads folder
-    fs.unlink(req.file.path, (err) => {
-      if (err) console.error('Error deleting temp file:', err);
-    });
-
-    res.json({ data: { fileUrl } });
+    res.json({ data: { fileUrl: req.file.path } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
