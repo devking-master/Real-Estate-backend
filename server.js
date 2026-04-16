@@ -11,9 +11,9 @@ const app = express();
 
 // --- 1. MIDDLEWARE (Order is Critical) ---
 
-// Configure CORS to allow all origins
+// Configure CORS to allow local and production origins
 app.use(cors({
-  origin: '*', 
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://real-estate-backend-oa4v.onrender.com'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
